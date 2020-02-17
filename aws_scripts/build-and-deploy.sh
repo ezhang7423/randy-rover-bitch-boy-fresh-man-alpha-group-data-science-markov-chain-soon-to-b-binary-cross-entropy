@@ -1,5 +1,5 @@
 #!/bin/bash
-[ -f .catkin-workspace ] || { echo not in correct directory!; exit 1; }
+[ -f .catkin_workspace ] || { echo not in correct directory!; exit 1; }
 
 colcon build
 colcon bundle
