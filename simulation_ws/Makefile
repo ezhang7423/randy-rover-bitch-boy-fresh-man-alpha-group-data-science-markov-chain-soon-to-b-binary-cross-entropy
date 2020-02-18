@@ -12,9 +12,8 @@ deploy: bundle
 	touch deploy
 
 run: build
-	echo roslaunch
-	. install/setup.sh
-	roslaunch mars mars_full_sim.launch
+	. install/setup.sh && . install/mars/share/mars/launch/bucket.sh \
+		&& roslaunch mars mars_full_sim.launch
 
 clean:
 	rm -rf build/ bundle/ log/ install/ deploy
