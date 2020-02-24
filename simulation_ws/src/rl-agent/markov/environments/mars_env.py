@@ -382,8 +382,9 @@ class MarsEnv(gym.Env):
             print("rover has gotten stuck")
             return 0, True
 
-        if (abs(self.x - self.last_position_x) <= 1 and abs(self.y - self.last_position_y) <= 1):
+        if (abs(self.x - self.last_position_x) <= .001 and abs(self.y - self.last_position_y) <= .001):
             self.samespotTimes += 1
+            print('in same spot')
         TEST_X = 10
         testY = 0
 
@@ -441,7 +442,7 @@ class MarsEnv(gym.Env):
             
             
             # No Episode ending events - continue to calculate reward
-            if math.hypot(self.last_position_x-TEST_X, self.last_position_y-testY) < 1: 
+            if math.hypot(self.x-TEST_X, self.y-testY) < 1: 
                 print('Congrulations!!!!!! we fucking did it')
                 return 10000, True
                 
@@ -458,8 +459,8 @@ class MarsEnv(gym.Env):
                 multiplier = multiplier + .25
             else:
                 multiplier = multiplier # probably going to hit something and get a zero reward
-
-            if newDistanceToTest <= self.distToTest:
+            print('newDistanceToTest', newDistanceToTest, 'self.distToTest', self.distToTest)
+            if newDistanceToTest >= self.distToTest:
                 multiplier = 0
             reward = base_reward * multiplier
             self.distToTest = newDistanceToTest
