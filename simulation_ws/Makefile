@@ -26,4 +26,4 @@ run-env-only: build
 		&& roslaunch mars mars_env_only.launch
 
 clean:
-	rm -rf build/ bundle/ log/ install/ deploy
+	rm -rf build/ bundle/ log/ install/

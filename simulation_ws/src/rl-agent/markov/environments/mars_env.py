@@ -331,7 +331,7 @@ class MarsEnv(gym.Env):
               'CT:%.2f' % self.collision_threshold,             # Collision Threshold
               'CTCP:%f' % self.closer_to_checkpoint,            # Is closer to checkpoint
               'PSR: %f' % self.power_supply_range,              # Steps remaining in Episode
-              'IMU: %f' % avg_imu
+              'IMU: %f' % avg_imu,
               'X:', self.x,
               'Y:', self.y)
 
@@ -382,8 +382,9 @@ class MarsEnv(gym.Env):
             print("rover has gotten stuck")
             return 0, True
 
-        if (math.abs(self.current_position_x - self.last_position_x) <= 1 and math.abs(self.current_position_y - self.last_position_y) <= 
-        
+        if (abs(self.x - self.last_position_x) <= 1 and abs(self.y - self.last_position_y) <= 1):
+            self.samespotTimes += 1
+        TEST_X = 10
         testY = 0
 
         # REWARD Multipliers
