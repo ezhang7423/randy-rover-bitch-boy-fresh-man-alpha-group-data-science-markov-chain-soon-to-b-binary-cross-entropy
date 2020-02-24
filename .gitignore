@@ -7,4 +7,4 @@ build/
 install/
 log/
 bundle/
-/simulation_ws/deploy
+*.swp

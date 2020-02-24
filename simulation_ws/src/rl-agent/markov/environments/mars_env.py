@@ -86,17 +86,16 @@ class MarsEnv(gym.Env):
         self.steering = 0
         self.throttle = 0
         self.power_supply_range = MAX_STEPS                                     # Kill switch (power supply)
-        
-
+        self.closer_to_x = False
+        self.distToTest = 100000
+        self.samespotTimes = 0
         # Imu Sensor readings
         self.max_lin_accel_x = 0
         self.max_lin_accel_y = 0
         self.max_lin_accel_z = 0
-        
         self.reached_waypoint_1 = False
         self.reached_waypoint_2 = False
         self.reached_waypoint_3 = False
-
 
         # action space -> steering angle, throttle
         self.action_space = spaces.Box(low=np.array([-1, 0]), high=np.array([+1, +3]), dtype=np.float32)
@@ -332,7 +331,9 @@ class MarsEnv(gym.Env):
               'CT:%.2f' % self.collision_threshold,             # Collision Threshold
               'CTCP:%f' % self.closer_to_checkpoint,            # Is closer to checkpoint
               'PSR: %f' % self.power_supply_range,              # Steps remaining in Episode
-              'IMU: %f' % avg_imu)
+              'IMU: %f' % avg_imu
+              'X:', self.x,
+              'Y:', self.y)
 
         self.reward = reward
         self.done = done
@@ -377,7 +378,17 @@ class MarsEnv(gym.Env):
         WAYPOINT_3_X = -34
         WAYPOINT_3_Y = 3
         
+        if (self.samespotTimes >= 100):
+            print("rover has gotten stuck")
+            return 0, True
+
+        if (math.abs(self.current_position_x - self.last_position_x) <= 1 and math.abs(self.current_position_y - self.last_position_y) <= 
+        
+        testY = 0
+
         # REWARD Multipliers
+
+
         FINISHED_REWARD = 10000
         WAYPOINT_1_REWARD = 1000
         WAYPOINT_2_REWARD = 2000
@@ -385,7 +396,7 @@ class MarsEnv(gym.Env):
 
         reward = 0
         base_reward = 2
-        multiplier = 0
+        multiplier = 1
         done = False
         
         
@@ -393,6 +404,7 @@ class MarsEnv(gym.Env):
             
             # Check for episode ending events first
             # ###########################################
+            
             
             # Has LIDAR registered a hit
             if self.collision_threshold <= CRASH_DISTANCE:
@@ -428,54 +440,14 @@ class MarsEnv(gym.Env):
             
             
             # No Episode ending events - continue to calculate reward
-            
-            if self.last_position_x <= WAYPOINT_1_X and self.last_position_y <= WAYPOINT_1_Y: # Rover is past the midpoint
-                # Determine if Rover already received one time reward for reaching this waypoint
-                if not self.reached_waypoint_1:  
-                    self.reached_waypoint_1 = True
-                    print("Congratulations! The rover has reached waypoint 1!")
-                    multiplier = 1 
-                    reward = (WAYPOINT_1_REWARD * multiplier)/ self.steps # <-- incentivize to reach way-point in fewest steps
-                    return reward, False
-            
-            if self.last_position_x <= WAYPOINT_2_X and self.last_position_y >= WAYPOINT_2_Y: # Rover is past the midpoint
-                # Determine if Rover already received one time reward for reaching this waypoint
-                if not self.reached_waypoint_2:  
-                    self.reached_waypoint_2 = True
-                    print("Congratulations! The rover has reached waypoint 2!")
-                    multiplier = 1 
-                    reward = (WAYPOINT_2_REWARD * multiplier)/ self.steps # <-- incentivize to reach way-point in fewest steps
-                    return reward, False
-                    
-            if self.last_position_x <= WAYPOINT_3_X and self.last_position_y >= WAYPOINT_3_Y: # Rover is past the midpoint
-                # Determine if Rover already received one time reward for reaching this waypoint
-                if not self.reached_waypoint_3:  
-                    self.reached_waypoint_3 = True
-                    print("Congratulations! The rover has reached waypoint 3!")
-                    multiplier = 1 
-                    reward = (WAYPOINT_3_REWARD * multiplier)/ self.steps # <-- incentivize to reach way-point in fewest steps
-                    return reward, False
-                    
-            
-            # To reach this point in the function the Rover has either not yet reached the way-points OR has already gotten the one time reward for reaching the waypoint(s)
-               
-            # multiply the reward based on the Rover's proximity to the Checkpoint
-            waypoint_interval = INITIAL_DISTANCE_TO_CHECKPOINT / 5 
-           
-            marker = [waypoint_interval,(waypoint_interval * 2),(waypoint_interval * 3),(waypoint_interval * 4)]
+            if math.hypot(self.last_position_x-TEST_X, self.last_position_y-testY) < 1: 
+                print('Congrulations!!!!!! we fucking did it')
+                return 10000, True
                 
-            # Get the Base multiplier
-            if self.current_distance_to_checkpoint <= marker[0]:
-                multiplier = 5
-            elif self.current_distance_to_checkpoint <= marker[1] and self.current_distance_to_checkpoint > marker[0]:
-                multiplier = 4
-            elif self.current_distance_to_checkpoint <= marker[2] and self.current_distance_to_checkpoint > marker[1]:
-                multiplier = 3
-            elif self.current_distance_to_checkpoint <= marker[3] and self.current_distance_to_checkpoint > marker[2]:
-                multiplier = 2
-            else:
-                multiplier = 1
-            
+
+                                                        
+            newDistanceToTest = math.hypot((self.last_position_x - TEST_X), (self.last_position_y - testY))
+
             # Incentivize the rover to stay away from objects
             if self.collision_threshold >= 2.0:      # very safe distance
                 multiplier = multiplier + 1
@@ -485,15 +457,11 @@ class MarsEnv(gym.Env):
                 multiplier = multiplier + .25
             else:
                 multiplier = multiplier # probably going to hit something and get a zero reward
-            
-            # Incentize the rover to move towards the Checkpoint and not away from the checkpoint
-            if not self.closer_to_checkpoint:
-                if multiplier > 0:
-                    # Cut the multiplier in half
-                    multiplier = multiplier/2
-                    
+
+            if newDistanceToTest <= self.distToTest:
+                multiplier = 0
             reward = base_reward * multiplier
-            
+            self.distToTest = newDistanceToTest
         
         return reward, done
     
@@ -559,11 +527,12 @@ class MarsEnv(gym.Env):
         new_distance_to_checkpoint = Float64
         new_distance_to_checkpoint.data = abs(math.sqrt(((new_position.x - CHECKPOINT_X) ** 2) +
                                                         (new_position.y - CHECKPOINT_Y) ** 2))
-
         if new_distance_to_checkpoint.data < self.current_distance_to_checkpoint:
             self.closer_to_checkpoint = True
         else:
             self.closer_to_checkpoint = False
+
+
 
         # Update the distance to checkpoint
         self.current_distance_to_checkpoint = new_distance_to_checkpoint.data
