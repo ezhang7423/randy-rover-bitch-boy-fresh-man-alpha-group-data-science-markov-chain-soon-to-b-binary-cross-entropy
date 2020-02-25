@@ -1,6 +1,6 @@
 GET_ENV = . install/setup.sh && . install/mars/share/mars/launch/bucket.sh 
 
-build: $(shell find src -type f)
+build: log/setup $(shell find src -type f)
 	colcon build
 	touch build
 
@@ -26,6 +26,12 @@ run-full: build
 
 run-env: build
 	$(GET_ENV) && roslaunch mars mars_env_only.launch
+
+log/setup: setup.sh
+	./setup.sh
+	mkdir log
+	touch log/setup
+	echo ROS and tools installed! Source ~/.bashrc to get in PATH.
 
 clean:
 	rm -rf build/ bundle/ log/ install/

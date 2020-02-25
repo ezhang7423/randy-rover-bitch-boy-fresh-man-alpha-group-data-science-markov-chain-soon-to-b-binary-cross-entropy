@@ -6,7 +6,7 @@ if ! which roslaunch &> /dev/null; then
 	sudo apt-get update
 	sudo apt-get install ros-melodic-desktop-full
 	sudo rosdep init
-	echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
+	echo "source /opt/ros/melodic/setup.bash" >> $HOME/.bashrc
 fi
 
 rosdep update
