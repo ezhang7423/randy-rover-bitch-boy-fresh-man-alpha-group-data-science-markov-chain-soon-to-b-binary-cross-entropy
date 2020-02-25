@@ -18,6 +18,9 @@ deploy: bundle/deploy
 run-paused: build
 	$(GET_ENV) && roslaunch mars paused.launch
 
+run-headless: build
+	$(GET_ENV) && DISPLAY=:0 roslaunch mars headless.launch
+
 run-full: build
 	$(GET_ENV) && roslaunch mars mars_full_sim.launch
 
@@ -26,3 +29,8 @@ run-env: build
 
 clean:
 	rm -rf build/ bundle/ log/ install/
+
+model-reset:
+	rm -rf $$HOME/.ros/checkpoint
+	. src/mars/launch/bucket.sh && \
+		aws s3 rm s3://$$MODEL_S3_BUCKET/$$MODEL_S3_PREFIX/ --recursive
