@@ -1,6 +1,9 @@
-GET_ENV = . install/setup.sh && . install/mars/share/mars/launch/bucket.sh 
+ROS_ENV = install/setup.sh
+GET_MARS_ENV = . $(ROS_ENV) && . install/mars/share/mars/launch/bucket.sh 
+LAUNCH_MARS = $(GET_MARS_ENV) && roslaunch mars
 
-build: log/setup $(shell find src -type f)
+EXCLUDE_PATTERN = \.swp|\.idea|__pycache__
+build: log/setup $(shell find src -type f | grep -Ev '$(EXCLUDE_PATTERN)')
 	colcon build
 	touch build
 
@@ -16,22 +19,21 @@ bundle/deploy: bundle
 deploy: bundle/deploy
 
 run-paused: build
-	$(GET_ENV) && roslaunch mars paused.launch
+	$(LAUNCH_MARS) paused.launch
 
 run-headless: build
-	$(GET_ENV) && DISPLAY=:0 roslaunch mars headless.launch
+	$(GET_MARS_ENV) && DISPLAY=:0 roslaunch mars headless.launch
 
 run-full: build
-	$(GET_ENV) && roslaunch mars mars_full_sim.launch
+	$(LAUNCH_MARS) mars_full_sim.launch
 
 run-env: build
-	$(GET_ENV) && roslaunch mars mars_env_only.launch
+	$(LAUNCH_MARS) mars_env_only.launch
 
 log/setup: setup.sh
 	./setup.sh
 	mkdir log
 	touch log/setup
-	echo ROS and tools installed! Source ~/.bashrc to get in PATH.
 
 clean:
 	rm -rf build/ bundle/ log/ install/

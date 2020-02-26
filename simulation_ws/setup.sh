@@ -13,3 +13,5 @@ rosdep update
 
 sudo pip3 install -U awscli boto3
 sudo pip3 install -U colcon-common-extensions colcon-ros-bundle
+
+echo ROS and tools installed! Source ~/.bashrc to get in PATH.
