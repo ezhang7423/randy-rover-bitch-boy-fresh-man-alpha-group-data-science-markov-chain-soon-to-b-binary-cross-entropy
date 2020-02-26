@@ -32,7 +32,7 @@ run-env: build
 
 log/setup: setup.sh
 	./setup.sh
-	mkdir log
+	mkdir -p log
 	touch log/setup
 
 clean:
