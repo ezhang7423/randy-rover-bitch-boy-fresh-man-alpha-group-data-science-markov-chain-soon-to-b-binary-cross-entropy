@@ -18,16 +18,19 @@ bundle/deploy: bundle
 
 deploy: bundle/deploy
 
-run-paused: build
+run-paused: build model-reset
 	$(LAUNCH_MARS) paused.launch
 
-run-headless: build
+run-eval: build
+	$(LAUNCH_MARS) eval.launch
+
+run-headless: build model-reset
 	$(GET_MARS_ENV) && DISPLAY=:0 roslaunch mars headless.launch
 
-run-full: build
+run-full: build model-reset
 	$(LAUNCH_MARS) mars_full_sim.launch
 
-run-env: build
+run-env: build model-reset
 	$(LAUNCH_MARS) mars_env_only.launch
 
 log/setup: setup.sh
@@ -40,5 +43,7 @@ clean:
 
 model-reset:
 	rm -rf $$HOME/.ros/checkpoint
+
+model-purge: model-reset
 	. src/mars/launch/bucket.sh && \
 		aws s3 rm s3://$$MODEL_S3_BUCKET/$$MODEL_S3_PREFIX/ --recursive

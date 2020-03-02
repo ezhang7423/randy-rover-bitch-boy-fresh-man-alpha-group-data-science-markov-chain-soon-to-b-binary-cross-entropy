@@ -6,4 +6,4 @@ export PYTHONUNBUFFERED=1
 
 export NODE_TYPE=SIMULATION_WORKER
 
-python3 -m markov.mars_evaluation
+python3 -m markov.model_evaluation

@@ -3,7 +3,7 @@
 	<arg name="paused" default="false"/>
 	<arg name="use_sim_time" default="true"/>
 	<arg name="gui" default="true"/>
-	<arg name="verbose" default="true"/>
+	<arg name="verbose" default="false"/>
 	<arg name="debug" default="false"/>
 	<arg name="world" default="$(find mars)/worlds/mars.world"/>
 
@@ -19,8 +19,8 @@
 
 
 	<include file="$(find mars)/launch/rover_mars.launch"/>
-	<arg name="node_start_delay" default="10.0" />
+	<!--arg name="node_start_delay" default="5.0" />
 	<node name="agent" pkg="mars" type="run_local_rl_agent.sh" output="screen" required="true"
-		launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " />
-	<!--node name="agent" pkg="mars" type="run_local_rl_agent.sh" output="screen" required="true" /-->
+		launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " /-->
+	<node name="agent" pkg="mars" type="run_model_evaluation.sh" output="screen" required="true" />
 </launch>

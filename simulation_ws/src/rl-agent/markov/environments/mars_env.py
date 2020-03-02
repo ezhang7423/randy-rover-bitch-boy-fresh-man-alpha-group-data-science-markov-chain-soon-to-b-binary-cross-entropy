@@ -41,13 +41,17 @@ IMG_QUEUE_BUF_SIZE = 1
 MAX_STEPS = 2000
 
 # Destination Point
-CHECKPOINT_X = 44.25
+CHECKPOINT_X = -44.25
 CHECKPOINT_Y = -4
 
 # Initial position of the robot
 INITIAL_POS_X = -0.170505086911
 INITIAL_POS_Y = 0.114341186761
 INITIAL_POS_Z = -0.0418765865136
+
+# INITIAL_POS_X = -40
+# INITIAL_POS_Y = -4
+# INITIAL_POS_Z = -0.0418765865136
 
 INITIAL_ORIENT_X = 0.0135099011407
 INITIAL_ORIENT_Y = 0.040927747122
@@ -87,7 +91,6 @@ class MarsEnv(gym.Env):
         self.throttle = 0
         self.power_supply_range = MAX_STEPS                                     # Kill switch (power supply)
         self.closer_to_x = False
-        self.distToTest = 100000
         self.samespotTimes = 0
         # Imu Sensor readings
         self.max_lin_accel_x = 0
@@ -356,7 +359,7 @@ class MarsEnv(gym.Env):
         '''
         
         # Corner boundaries of the world (in Meters)
-        STAGE_X_MIN = -44.0
+        STAGE_X_MIN = -50
         STAGE_Y_MIN = -25.0
         STAGE_X_MAX = 15.0
         STAGE_Y_MAX = 22.0
@@ -372,36 +375,28 @@ class MarsEnv(gym.Env):
         WAYPOINT_1_X = -10
         WAYPOINT_1_Y = -4
         
-        WAYPOINT_2_X = -17
-        WAYPOINT_2_Y = 3
-        
-        WAYPOINT_3_X = -34
-        WAYPOINT_3_Y = 3
         
         if (self.samespotTimes >= 100):
             print("rover has gotten stuck")
+            self.samespotTimes = 0
+            
             return 0, True
 
-        if (abs(self.x - self.last_position_x) <= .001 and abs(self.y - self.last_position_y) <= .001):
+        if (abs(self.x - self.last_position_x) <= .005 and abs(self.y - self.last_position_y) <= .005):
             self.samespotTimes += 1
             print('in same spot')
-        TEST_X = 10
-        testY = 0
-
+        
         # REWARD Multipliers
 
-
-        FINISHED_REWARD = 10000
-        WAYPOINT_1_REWARD = 1000
-        WAYPOINT_2_REWARD = 2000
-        WAYPOINT_3_REWARD = 3000
+        WAYPOINT_1_REWARD = 20000
 
         reward = 0
         base_reward = 2
         multiplier = 1
         done = False
-        
-        
+
+        # last_distance = np.sqrt((self.last_position_x - CHECKPOINT_X)**2 +(self.last_position_y - CHECKPOINT_Y)**2)    
+        # current_distance = np.sqrt((self.x - CHECKPOINT_X)**2 +(self.y - CHECKPOINT_Y)**2)
         if self.steps > 0:
             
             # Check for episode ending events first
@@ -422,11 +417,11 @@ class MarsEnv(gym.Env):
             if self.power_supply_range < 1:
                 print("Rover's power supply has been drained (MAX Steps reached")
                 return 0, True # No reward
-            
+            current_distance_to_dest = math.hypot((self.x - CHECKPOINT_X), (self.y - CHECKPOINT_Y))
             # Has the Rover reached the destination
-            if self.last_position_x >= CHECKPOINT_X and self.last_position_y >= CHECKPOINT_Y:
+            if  current_distance_to_dest < 3:
                 print("Congratulations! The rover has reached the checkpoint!")
-                multiplier = FINISHED_REWARD
+                multiplier = 100000
                 reward = (base_reward * multiplier) / self.steps # <-- incentivize to reach checkpoint in fewest steps
                 return reward, True
             
@@ -439,17 +434,10 @@ class MarsEnv(gym.Env):
             if self.y < (GUIDERAILS_Y_MIN - .45) or self.y > (GUIDERAILS_Y_MAX + .45):
                 print("Rover has left the mission map!")
                 return 0, True
-            
-            
-            # No Episode ending events - continue to calculate reward
-            if math.hypot(self.x-TEST_X, self.y-testY) < 1: 
-                print('Congrulations!!!!!! we fucking did it')
-                return 10000, True
-                
-
-                                                        
-            newDistanceToTest = math.hypot((self.last_position_x - TEST_X), (self.last_position_y - testY))
-
+        
+            current_distance = math.hypot((self.x - WAYPOINT_1_X), (self.x - WAYPOINT_1_Y))
+            newDistanceToDest = math.hypot((self.last_position_x - WAYPOINT_1_X), (self.last_position_y - WAYPOINT_1_Y))
+           
             # Incentivize the rover to stay away from objects
             if self.collision_threshold >= 2.0:      # very safe distance
                 multiplier = multiplier + 1
@@ -459,11 +447,14 @@ class MarsEnv(gym.Env):
                 multiplier = multiplier + .25
             else:
                 multiplier = multiplier # probably going to hit something and get a zero reward
-            print('newDistanceToTest', newDistanceToTest, 'self.distToTest', self.distToTest)
-            if newDistanceToTest >= self.distToTest:
+            print('newDistanceToDest', newDistanceToDest, 'self.distToTest', current_distance)
+
+            if newDistanceToDest >= current_distance:
                 multiplier = 0
+            else:
+                multiplier = multiplier + 3
             reward = base_reward * multiplier
-            self.distToTest = newDistanceToTest
+        
         
         return reward, done
     
