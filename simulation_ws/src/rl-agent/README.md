@@ -1,1 +1,0 @@
-# NASA-JPL Rover Challenge
