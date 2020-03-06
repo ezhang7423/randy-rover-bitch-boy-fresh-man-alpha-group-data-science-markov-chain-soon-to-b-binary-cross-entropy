@@ -12,17 +12,14 @@ bundle: build
 	touch bundle
 
 bundle/deploy: bundle
-	./aws_scripts/update-sim-app.sh
-	./aws_scripts/create-sim-job.sh
+	./scripts/aws/update-sim-app.sh
+	./scripts/aws/create-sim-job.sh
 	touch bundle/deploy
 
 deploy: bundle/deploy
 
 run-paused: build model-reset
 	$(LAUNCH_MARS) paused.launch
-
-run-eval: build
-	$(LAUNCH_MARS) eval.launch
 
 run-headless: build model-reset
 	$(GET_MARS_ENV) && DISPLAY=:0 roslaunch mars headless.launch
@@ -32,6 +29,9 @@ run-full: build model-reset
 
 run-env: build model-reset
 	$(LAUNCH_MARS) mars_env_only.launch
+
+run-eval: build
+	$(LAUNCH_MARS) eval.launch
 
 log/setup: setup.sh
 	./setup.sh
