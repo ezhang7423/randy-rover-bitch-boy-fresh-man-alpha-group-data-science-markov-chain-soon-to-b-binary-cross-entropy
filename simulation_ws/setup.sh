@@ -8,10 +8,9 @@ if ! which roslaunch &> /dev/null; then
 	sudo rosdep init
 	echo "source /opt/ros/melodic/setup.bash" >> $HOME/.bashrc
 fi
-
 rosdep update
+echo ROS installed! Source ~/.bashrc to get in PATH.
 
-sudo pip3 install -U awscli boto3
-sudo pip3 install -U colcon-common-extensions colcon-ros-bundle
-
-echo ROS and tools installed! Source ~/.bashrc to get in PATH.
+[ -z "$VIRTUAL_ENV" ] && { echo Must run from venv!; exit 2; }
+pip3 install -U awscli boto3
+pip3 install -U colcon-common-extensions colcon-ros-bundle
