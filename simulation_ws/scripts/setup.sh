@@ -13,7 +13,7 @@ if ! which roslaunch &> /dev/null; then
         echo '##############################################'
         echo '##############################################'
 fi
-#rosdep update
+rosdep update
 
 [ -z "$VIRTUAL_ENV" ] && { echo Must run from venv! Create one in repo root and activate.; exit 2; }
 require_file="$(dirname $VIRTUAL_ENV)/simulation_ws/scripts/requirements.txt"
