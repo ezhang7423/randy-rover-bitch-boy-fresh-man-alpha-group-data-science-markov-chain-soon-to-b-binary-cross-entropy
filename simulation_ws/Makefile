@@ -33,8 +33,8 @@ run-env: build model-reset
 run-eval: build
 	$(LAUNCH_MARS) eval.launch
 
-log/setup: setup.sh
-	./setup.sh
+log/setup: scripts/setup.sh
+	./scripts/setup.sh
 	mkdir -p log
 	touch log/setup
 

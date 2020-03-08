@@ -19,7 +19,7 @@ rosdep update
 require_file="$(dirname $VIRTUAL_ENV)/simulation_ws/scripts/requirements.txt"
 [ ! -f $require_file ] && { echo "Requirements not found! Is venv in repo root?"; exit 3; }
 pip install -r $require_file
-if ! pip list -l | grep 'python-apt'; then # need python-apt hack
+if ! pip list -l | grep 'python-apt' &> /dev/null; then # need python-apt hack
     pushd `mktemp -d`
     apt-get download python3-apt || exit 4
     dpkg -x python3-apt*.deb python3-apt
