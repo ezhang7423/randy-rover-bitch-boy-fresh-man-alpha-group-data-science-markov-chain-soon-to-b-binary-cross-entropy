@@ -1,3 +1,9 @@
+# IMPORTANT: PAY ATTENTION!
+
+Before doing ANYTHING, make a virtual environment in the repo root,
+next to this README. Then, activate it.
+
+
 ![header image](images/2.png)
 
 
