@@ -9,3 +9,6 @@ install/
 log/
 bundle/
 *.swp
+venv/
+dist/
+*.egg-info/

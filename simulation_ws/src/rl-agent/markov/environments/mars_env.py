@@ -618,7 +618,6 @@ class MarsEnv(gym.Env):
             else:
                 multiplier = multiplier + 3
             reward = base_reward * multiplier
-
         return reward, done
 
     """
