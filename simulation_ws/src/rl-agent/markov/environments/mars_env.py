@@ -579,7 +579,7 @@ class MarsEnv(gym.Env):
         CURRENT_WAYPOINT = (WAYPOINT_1_X[self.whichwaypoint], WAYPOINT_1_Y[self.whichwaypoint])
         
 
-        INITIAL_DISTANCE_TO_WAYPOINT = .1 #make variable
+        INITIAL_DISTANCE_TO_WAYPOINT = 1.1 #make variable
         reward_budget = 100000 / 100
         done = False
 
@@ -587,7 +587,7 @@ class MarsEnv(gym.Env):
 
         
         current_distance = math.hypot((self.x - CURRENT_WAYPOINT[0]), (self.y - CURRENT_WAYPOINT[1]))
-        
+
         last_distance = math.hypot(
             (self.last_position_x - CURRENT_WAYPOINT[0]),
             (self.last_position_y - CURRENT_WAYPOINT[1]),
@@ -620,9 +620,9 @@ class MarsEnv(gym.Env):
                 multiplier + .2  # probably going to hit something and get a zero reward
             )
 
-        print(TGREEN + 'last x and y:', self.last_position_x, self.last_position_y, ENDC)
+        # print(TGREEN + '\/ last x and y:', self.last_position_x, self.last_position_y, ENDC)
         print(
-            TGREEN + "last", last_distance, "current", current_distance, ENDC
+            TGREEN + "\/ \/ last", last_distance, "current", current_distance, ENDC
         )
 
         reward = (
