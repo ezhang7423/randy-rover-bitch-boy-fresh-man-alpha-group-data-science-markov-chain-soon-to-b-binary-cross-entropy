@@ -21,7 +21,7 @@ Usage: ./scripts/test-algos.sh [algo1 [algo2...]], where algoN is:
 EOM
     exit 1
 fi
-[ -f ./.catkin_workspace ] || { echo Not in correct workspace!; exit 2; }
+[ -z "$VIRTUAL_ENV" ] && { echo Must run from venv!; exit 2; }
 
 export MODEL_S3_BUCKET="randy-rover"
 export ROS_AWS_REGION="us-east-1"
@@ -36,6 +36,7 @@ export MODEL_S3_PREFIX=$preprefix
 export LOCAL_MODEL_DIRECTORY=$model_dir
 export COACH_ALGO=0
 
+cd "$(dirname $VIRTUAL_ENV)/simulation_ws"
 make build
 . install/setup.bash
 
@@ -47,3 +48,4 @@ for i in $@; do
     [ -d $log_dir/$i ] || mkdir -p $log_dir/$i
     roslaunch mars headless.launch &> "$log_dir/$i/$(date -Iseconds).log" &
 done
+jobs -l

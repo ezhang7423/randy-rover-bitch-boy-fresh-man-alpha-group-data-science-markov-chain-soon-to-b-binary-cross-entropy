@@ -477,7 +477,7 @@ class MarsEnv(gym.Env):
         if current_distance_to_dest < 3:
             print("Congratulations! The rover has reached the checkpoint!")
             multiplier = 100000
-            reward = (base_reward * multiplier) / self.steps
+            reward = (2 * multiplier) / self.steps
             return reward, True
 
         current_distance = math.hypot((self.x - WAYPOINT_1_X), (self.x - WAYPOINT_1_Y))
@@ -485,21 +485,28 @@ class MarsEnv(gym.Env):
             (self.last_position_x - WAYPOINT_1_X),
             (self.last_position_y - WAYPOINT_1_Y),
         )
+        multiplier = 1
 
+        if (abs(self.x - self.last_position_x) <= 0.005
+            and abs(self.y - self.last_position_y) <= 0.005
+            ):
+                self.samespotTimes += 1
+                print("in same spot")
+                return 0, False
         # # Incentivize the rover to stay away from objects
         # if self.collision_threshold >= 2.0:  # very safe distance
-        #     multiplier = multiplier + 1
+        #     multiplier = 1
         # elif (
         #     self.collision_threshold < 2.0 and self.collision_threshold >= 1.5
         # ):  # pretty safe
-        #     multiplier = multiplier + 0.5
+        #     multiplier = 0.8
         # elif (
         #     self.collision_threshold < 1.5 and self.collision_threshold >= 1.0
         # ):  # just enough time to turn
-        #     multiplier = multiplier + 0.25
+        #     multiplier =  0.6
         # else:
         #     multiplier = (
-        #         multiplier  # probably going to hit something and get a zero reward
+        #         0.5 # probably going to hit something and get a zero reward
         #     )
         print(
             "last", last_distance, "current", current_distance,
@@ -508,7 +515,7 @@ class MarsEnv(gym.Env):
         reward = (
             (last_distance - current_distance)
             / (INITIAL_DISTANCE_TO_WAYPOINT)
-            * reward_budget
+            * reward_budget * multiplier
         )
 
         return reward, done

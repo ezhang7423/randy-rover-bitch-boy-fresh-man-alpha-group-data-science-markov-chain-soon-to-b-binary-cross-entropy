@@ -136,7 +136,7 @@ class MarsEnv(gym.Env):
         signal(SIGINT, handler)
 
         self.run = 0
-
+        self.waypointsteps = 0
         self.x = INITIAL_POS_X  # Current position of Rover
         self.y = INITIAL_POS_Y  # Current position of Rover
         self.last_position_x = INITIAL_POS_X  # Previous position of Rover
@@ -225,6 +225,7 @@ class MarsEnv(gym.Env):
 
         steering = float(action[0])
         throttle = float(action[1])
+        self.waypointsteps += 1
         self.steps += 1
         self.send_action(steering, throttle)
         time.sleep(SLEEP_BETWEEN_ACTION_AND_REWARD_CALCULATION_TIME_IN_SECOND)
@@ -339,6 +340,7 @@ class MarsEnv(gym.Env):
         self.distance_travelled = 0
         self.current_distance_to_checkpoint = INITIAL_DISTANCE_TO_CHECKPOINT
         self.steps = 0
+        self.whichwaypoint = 0
         self.reward_in_episode = 0
         self.collision = False
         self.closer_to_checkpoint = False
@@ -494,19 +496,7 @@ class MarsEnv(gym.Env):
 
         # END CHANGES
 
-    """
-    EDIT - but do not change the function signature. 
-    Must return a reward value as a float 
-    Must return a boolean value indicating if episode is complete
-    Must be returned in order of reward, done
-    """
-
-    def reward_function(self):
-        """
-        :return: reward as float
-                 done as boolean
-        """
-
+    def has_failed(self):
         # Corner boundaries of the world (in Meters)
         STAGE_X_MIN = -50
         STAGE_Y_MIN = -25.0
@@ -517,36 +507,20 @@ class MarsEnv(gym.Env):
         GUIDERAILS_X_MAX = 1
         GUIDERAILS_Y_MIN = -6
         GUIDERAILS_Y_MAX = 4
-
-        # WayPoints to checkpoint
-        WAYPOINT_1_X = -10
-        WAYPOINT_1_Y = -4
-
-        if self.samespotTimes >= 100:
-            print("rover has gotten stuck")
-            self.samespotTimes = 0
-
-            return 0, True
-
-        if (
-            abs(self.x - self.last_position_x) <= 0.005
-            and abs(self.y - self.last_position_y) <= 0.005
-        ):
-            self.samespotTimes += 1
-            print("in same spot")
-
-        # REWARD Multipliers
-
-        WAYPOINT_1_REWARD = 20000
-
-        reward = 0
-        base_reward = 2
-        multiplier = 1
-        done = False
-
-        # last_distance = np.sqrt((self.last_position_x - CHECKPOINT_X)**2 +(self.last_position_y - CHECKPOINT_Y)**2)
-        # current_distance = np.sqrt((self.x - CHECKPOINT_X)**2 +(self.y - CHECKPOINT_Y)**2)
         if self.steps > 0:
+
+            if self.samespotTimes >= 100:
+                print("rover has gotten stuck")
+                self.samespotTimes = 0
+
+                return True
+
+            if (
+                abs(self.x - self.last_position_x) <= 0.005
+                and abs(self.y - self.last_position_y) <= 0.005
+            ):
+                self.samespotTimes += 1
+                print("in same spot")
 
             # Check for episode ending events first
             # ###########################################
@@ -554,75 +528,236 @@ class MarsEnv(gym.Env):
             # Has LIDAR registered a hit
             if self.collision_threshold <= CRASH_DISTANCE:
                 print("Rover has sustained sideswipe damage")
-                return 0, True  # No reward
+                return True  # No reward
 
             # Have the gravity sensors registered too much G-force
             if self.collision:
                 print("Rover has collided with an object")
-                return 0, True  # No reward
+                return True  # No reward
 
             # Has the rover reached the max steps
             if self.power_supply_range < 1:
                 print("Rover's power supply has been drained (MAX Steps reached")
-                return 0, True  # No reward
-            current_distance_to_dest = math.hypot(
-                (self.x - CHECKPOINT_X), (self.y - CHECKPOINT_Y)
-            )
-            # Has the Rover reached the destination
-            if current_distance_to_dest < 3:
-                print("Congratulations! The rover has reached the checkpoint!")
-                multiplier = 100000
-                reward = (
-                    base_reward * multiplier
-                ) / self.steps  # <-- incentivize to reach checkpoint in fewest steps
-                return reward, True
+                return True  # No reward
 
             # If it has not reached the check point is it still on the map?
             if self.x < (GUIDERAILS_X_MIN - 0.45) or self.x > (GUIDERAILS_X_MAX + 0.45):
                 print("Rover has left the mission map!")
-                return 0, True
+                return True
 
             if self.y < (GUIDERAILS_Y_MIN - 0.45) or self.y > (GUIDERAILS_Y_MAX + 0.45):
                 print("Rover has left the mission map!")
-                return 0, True
+                return True
 
-            current_distance = math.hypot(
-                (self.x - WAYPOINT_1_X), (self.x - WAYPOINT_1_Y)
-            )
-            newDistanceToDest = math.hypot(
-                (self.last_position_x - WAYPOINT_1_X),
-                (self.last_position_y - WAYPOINT_1_Y),
-            )
+    """
+    EDIT - but do not change the function signature. 
+    Must return a reward value as a float 
+    Must return a boolean value indicating if episode is complete
+    Must be returned in order of reward, done
+    """
+    def reward_function(self):
+        """
+        :return: reward as float
+                 done as boolean
+        """
+        failed = self.has_failed()
+        if failed:
+            return 0, True
 
-            # Incentivize the rover to stay away from objects
-            if self.collision_threshold >= 2.0:  # very safe distance
-                multiplier = multiplier + 1
-            elif (
-                self.collision_threshold < 2.0 and self.collision_threshold >= 1.5
-            ):  # pretty safe
-                multiplier = multiplier + 0.5
-            elif (
-                self.collision_threshold < 1.5 and self.collision_threshold >= 1.0
-            ):  # just enough time to turn
-                multiplier = multiplier + 0.25
-            else:
-                multiplier = (
-                    multiplier  # probably going to hit something and get a zero reward
-                )
-            print(
-                "newDistanceToDest",
-                newDistanceToDest,
-                "self.distToTest",
-                current_distance,
+        current_distance_to_dest = math.hypot(
+                (self.x - CHECKPOINT_X), (self.y - CHECKPOINT_Y)
             )
+        if current_distance_to_dest < 3:
+            print("Congratulations! The rover has reached the checkpoint!")
+            multiplier = 100000
+            reward = (2 * multiplier) / self.steps
+            return reward, True
 
-            if newDistanceToDest >= current_distance:
-                multiplier = 0
-            else:
-                multiplier = multiplier + 3
-            reward = base_reward * multiplier
+
+
+        # if self.waypointsteps > MAX_WAYPOINT_STEPS:
+        #     return 0, True 
+        # stop if over a certain threshold per waypoint
+
+
+        # WAYPOINT_1_X = [...]
+        # WAYPOINT_1_Y = [....]
+        # CURRENT_WAYPOINT = (WAYPOINT_1_X[self.whichwaypoint], WAYPOINT_1_Y[self.whichwaypoint])
+        
+        WAYPOINT_1_X = -10
+        WAYPOINT_1_Y = -4
+        INITIAL_DISTANCE_TO_WAYPOINT = 10.77
+        reward_budget = 100000
+        done = False
+
+  
+        current_distance = math.hypot((self.x - WAYPOINT_1_X), (self.x - WAYPOINT_1_Y))
+        last_distance = math.hypot(
+            (self.last_position_x - WAYPOINT_1_X),
+            (self.last_position_y - WAYPOINT_1_Y),
+        )
+        waypointNo = 0
+        if current_distance < 3:
+            print('reached waypoint', waypointNo)
+            self.whichwaypoint += 1
+            self.waypointsteps = 0
+            return 10, False
+
+        
+      
+        
+        # # Incentivize the rover to stay away from objects
+        # multiplier = 0
+        # if self.collision_threshold >= 2.0:  # very safe distance
+        #     multiplier = multiplier + .9
+        # elif (
+        #     self.collision_threshold < 2.0 and self.collision_threshold >= 1.5
+        # ):  # pretty safe
+        #     multiplier = multiplier + 0.5
+        # elif (
+        #     self.collision_threshold < 1.5 and self.collision_threshold >= 1.0
+        # ):  # just enough time to turn
+        #     multiplier = multiplier + 0.25
+        # else:
+        #     multiplier = (
+        #         multiplier  # probably going to hit something and get a zero reward
+        #     )
+        print(
+            "last", last_distance, "current", current_distance,
+        )
+
+        reward = (
+            (last_distance - current_distance)
+            / (INITIAL_DISTANCE_TO_WAYPOINT)
+            * reward_budget
+        )
+
 
         return reward, done
+
+
+    # def reward_function(self):
+    #     """
+    #     :return: reward as float
+    #              done as boolean
+    #     """
+
+    #     # Corner boundaries of the world (in Meters)
+    #     STAGE_X_MIN = -50
+    #     STAGE_Y_MIN = -25.0
+    #     STAGE_X_MAX = 15.0
+    #     STAGE_Y_MAX = 22.0
+
+    #     GUIDERAILS_X_MIN = -46
+    #     GUIDERAILS_X_MAX = 1
+    #     GUIDERAILS_Y_MIN = -6
+    #     GUIDERAILS_Y_MAX = 4
+
+    #     # WayPoints to checkpoint
+    #     WAYPOINT_1_X = -10
+    #     WAYPOINT_1_Y = -4
+
+    #     if self.samespotTimes >= 100:
+    #         print("rover has gotten stuck")
+    #         self.samespotTimes = 0
+
+    #         return 0, True
+
+    #     if (
+    #         abs(self.x - self.last_position_x) <= 0.005
+    #         and abs(self.y - self.last_position_y) <= 0.005
+    #     ):
+    #         self.samespotTimes += 1
+    #         print("in same spot")
+
+    #     # REWARD Multipliers
+
+    #     WAYPOINT_1_REWARD = 20000
+
+    #     reward = 0
+    #     base_reward = 2
+    #     multiplier = 1
+    #     done = False
+
+    #     # last_distance = np.sqrt((self.last_position_x - CHECKPOINT_X)**2 +(self.last_position_y - CHECKPOINT_Y)**2)
+    #     # current_distance = np.sqrt((self.x - CHECKPOINT_X)**2 +(self.y - CHECKPOINT_Y)**2)
+    #     if self.steps > 0:
+
+    #         # Check for episode ending events first
+    #         # ###########################################
+
+    #         # Has LIDAR registered a hit
+    #         if self.collision_threshold <= CRASH_DISTANCE:
+    #             print("Rover has sustained sideswipe damage")
+    #             return 0, True  # No reward
+
+    #         # Have the gravity sensors registered too much G-force
+    #         if self.collision:
+    #             print("Rover has collided with an object")
+    #             return 0, True  # No reward
+
+    #         # Has the rover reached the max steps
+    #         if self.power_supply_range < 1:
+    #             print("Rover's power supply has been drained (MAX Steps reached")
+    #             return 0, True  # No reward
+    #         current_distance_to_dest = math.hypot(
+    #             (self.x - CHECKPOINT_X), (self.y - CHECKPOINT_Y)
+    #         )
+    #         # Has the Rover reached the destination
+    #         if current_distance_to_dest < 3:
+    #             print("Congratulations! The rover has reached the checkpoint!")
+    #             multiplier = 100000
+    #             reward = (
+    #                 base_reward * multiplier
+    #             ) / self.steps  # <-- incentivize to reach checkpoint in fewest steps
+    #             return reward, True
+
+    #         # If it has not reached the check point is it still on the map?
+    #         if self.x < (GUIDERAILS_X_MIN - 0.45) or self.x > (GUIDERAILS_X_MAX + 0.45):
+    #             print("Rover has left the mission map!")
+    #             return 0, True
+
+    #         if self.y < (GUIDERAILS_Y_MIN - 0.45) or self.y > (GUIDERAILS_Y_MAX + 0.45):
+    #             print("Rover has left the mission map!")
+    #             return 0, True
+
+    #         current_distance = math.hypot(
+    #             (self.x - WAYPOINT_1_X), (self.x - WAYPOINT_1_Y)
+    #         )
+    #         newDistanceToDest = math.hypot(
+    #             (self.last_position_x - WAYPOINT_1_X),
+    #             (self.last_position_y - WAYPOINT_1_Y),
+    #         )
+
+    #         # Incentivize the rover to stay away from objects
+    #         if self.collision_threshold >= 2.0:  # very safe distance
+    #             multiplier = multiplier + 1
+    #         elif (
+    #             self.collision_threshold < 2.0 and self.collision_threshold >= 1.5
+    #         ):  # pretty safe
+    #             multiplier = multiplier + 0.5
+    #         elif (
+    #             self.collision_threshold < 1.5 and self.collision_threshold >= 1.0
+    #         ):  # just enough time to turn
+    #             multiplier = multiplier + 0.25
+    #         else:
+    #             multiplier = (
+    #                 multiplier  # probably going to hit something and get a zero reward
+    #             )
+    #         print(
+    #             "newDistanceToDest",
+    #             newDistanceToDest,
+    #             "self.distToTest",
+    #             current_distance,
+    #         )
+
+    #         if newDistanceToDest >= current_distance:
+    #             multiplier = 0
+    #         else:
+    #             multiplier = multiplier + 3
+    #         reward = base_reward * multiplier
+
+    #     return reward, done
 
     """
     DO NOT EDIT - Function to receive LIDAR data from a ROSTopic

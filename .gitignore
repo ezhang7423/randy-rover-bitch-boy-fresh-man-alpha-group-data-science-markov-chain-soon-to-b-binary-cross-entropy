@@ -1,3 +1,4 @@
+**/outputs
 venv/
 **/.ipynb_checkpoints
 **/.idea
