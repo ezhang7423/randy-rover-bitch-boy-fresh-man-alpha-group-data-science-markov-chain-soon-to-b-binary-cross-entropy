@@ -40,25 +40,6 @@ def handler(signal_received, frame):
         fout.seek(0)
         fout.write(writeable)
         fout.truncate()
-    # try:
-    #     os.mkdir(os.path.join(cwd, "outputs", version, str(episode), str(run)))
-    # except FileExistsError as e:
-    #     print(e)
-    #     exit(0)
-    # print("sigterm handler writing data: ")
-    # print(data)
-    # print("run no:")
-    # print(run)
-    # np.save(
-    #     os.path.join(
-    #         cwd, "outputs", version, str(episode), str(run), "coordinates.npy"
-    #     ),
-    #     coordinates,
-    # )
-    # np.save(
-    #     os.path.join(cwd, "outputs", version, str(episode), str(run), "outputs.npy"),
-    #     outputs,
-    # )
     print("SIGINT or CTRL-C detected. Exiting gracefully")
     exit(0)
 
@@ -71,8 +52,11 @@ with open(os.path.join(cwd, "run.txt"), "r") as fin:
 if not os.path.isdir(os.path.join(cwd, "outputs", version)):
     os.mkdir(os.path.join(cwd, "outputs", version))
 
-
-os.mkdir(os.path.join(cwd, "outputs", version, str(episode)))
+try:
+    os.mkdir(os.path.join(cwd, "outputs", version, str(episode)))
+except FileExistsError:
+    os.mkdir(os.path.join(cwd, "outputs", version, str(episode + 1)))
+    episode = episode + 1
 
 
 coordinates = np.zeros((10000, 2))
@@ -580,24 +564,28 @@ class MarsEnv(gym.Env):
         # stop if over a certain threshold per waypoint
 
 
-        # WAYPOINT_1_X = [...]
-        # WAYPOINT_1_Y = [....]
-        # CURRENT_WAYPOINT = (WAYPOINT_1_X[self.whichwaypoint], WAYPOINT_1_Y[self.whichwaypoint])
+        WAYPOINT_1_X = np.load(os.path.join(cwd, 'correct/spline_x.npy'))
+        WAYPOINT_1_Y = np.load(os.path.join(cwd, 'correct/spline_y.npy'))
+        CURRENT_WAYPOINT = (WAYPOINT_1_X[self.whichwaypoint], WAYPOINT_1_Y[self.whichwaypoint])
         
-        WAYPOINT_1_X = -10
-        WAYPOINT_1_Y = -4
-        INITIAL_DISTANCE_TO_WAYPOINT = 10.77
-        reward_budget = 100000
+
+        # WAYPOINT_1_X = -10
+        # WAYPOINT_1_Y = -4
+        INITIAL_DISTANCE_TO_WAYPOINT = .3
+        reward_budget = 100000 / 100
         done = False
 
-  
-        current_distance = math.hypot((self.x - WAYPOINT_1_X), (self.x - WAYPOINT_1_Y))
+
+
+        
+        current_distance = math.hypot((self.x - CURRENT_WAYPOINT[0]), (self.y - CURRENT_WAYPOINT[1]))
         last_distance = math.hypot(
-            (self.last_position_x - WAYPOINT_1_X),
-            (self.last_position_y - WAYPOINT_1_Y),
+            (self.last_position_x - CURRENT_WAYPOINT[0]),
+            (self.last_position_y - CURRENT_WAYPOINT[1]),
         )
         waypointNo = 0
-        if current_distance < 3:
+        
+        if current_distance < .1:
             print('reached waypoint', waypointNo)
             self.whichwaypoint += 1
             self.waypointsteps = 0
@@ -622,8 +610,11 @@ class MarsEnv(gym.Env):
         #     multiplier = (
         #         multiplier  # probably going to hit something and get a zero reward
         #     )
+        ENDC = '\033[m'
+        TGREEN =  '\033[32m'
+        print(TGREEN + 'last x and y:', self.last_position_x, self.last_position_y, ENDC)
         print(
-            "last", last_distance, "current", current_distance,
+            TGREEN + "last", last_distance, "current", current_distance, ENDC
         )
 
         reward = (
@@ -636,128 +627,7 @@ class MarsEnv(gym.Env):
         return reward, done
 
 
-    # def reward_function(self):
-    #     """
-    #     :return: reward as float
-    #              done as boolean
-    #     """
 
-    #     # Corner boundaries of the world (in Meters)
-    #     STAGE_X_MIN = -50
-    #     STAGE_Y_MIN = -25.0
-    #     STAGE_X_MAX = 15.0
-    #     STAGE_Y_MAX = 22.0
-
-    #     GUIDERAILS_X_MIN = -46
-    #     GUIDERAILS_X_MAX = 1
-    #     GUIDERAILS_Y_MIN = -6
-    #     GUIDERAILS_Y_MAX = 4
-
-    #     # WayPoints to checkpoint
-    #     WAYPOINT_1_X = -10
-    #     WAYPOINT_1_Y = -4
-
-    #     if self.samespotTimes >= 100:
-    #         print("rover has gotten stuck")
-    #         self.samespotTimes = 0
-
-    #         return 0, True
-
-    #     if (
-    #         abs(self.x - self.last_position_x) <= 0.005
-    #         and abs(self.y - self.last_position_y) <= 0.005
-    #     ):
-    #         self.samespotTimes += 1
-    #         print("in same spot")
-
-    #     # REWARD Multipliers
-
-    #     WAYPOINT_1_REWARD = 20000
-
-    #     reward = 0
-    #     base_reward = 2
-    #     multiplier = 1
-    #     done = False
-
-    #     # last_distance = np.sqrt((self.last_position_x - CHECKPOINT_X)**2 +(self.last_position_y - CHECKPOINT_Y)**2)
-    #     # current_distance = np.sqrt((self.x - CHECKPOINT_X)**2 +(self.y - CHECKPOINT_Y)**2)
-    #     if self.steps > 0:
-
-    #         # Check for episode ending events first
-    #         # ###########################################
-
-    #         # Has LIDAR registered a hit
-    #         if self.collision_threshold <= CRASH_DISTANCE:
-    #             print("Rover has sustained sideswipe damage")
-    #             return 0, True  # No reward
-
-    #         # Have the gravity sensors registered too much G-force
-    #         if self.collision:
-    #             print("Rover has collided with an object")
-    #             return 0, True  # No reward
-
-    #         # Has the rover reached the max steps
-    #         if self.power_supply_range < 1:
-    #             print("Rover's power supply has been drained (MAX Steps reached")
-    #             return 0, True  # No reward
-    #         current_distance_to_dest = math.hypot(
-    #             (self.x - CHECKPOINT_X), (self.y - CHECKPOINT_Y)
-    #         )
-    #         # Has the Rover reached the destination
-    #         if current_distance_to_dest < 3:
-    #             print("Congratulations! The rover has reached the checkpoint!")
-    #             multiplier = 100000
-    #             reward = (
-    #                 base_reward * multiplier
-    #             ) / self.steps  # <-- incentivize to reach checkpoint in fewest steps
-    #             return reward, True
-
-    #         # If it has not reached the check point is it still on the map?
-    #         if self.x < (GUIDERAILS_X_MIN - 0.45) or self.x > (GUIDERAILS_X_MAX + 0.45):
-    #             print("Rover has left the mission map!")
-    #             return 0, True
-
-    #         if self.y < (GUIDERAILS_Y_MIN - 0.45) or self.y > (GUIDERAILS_Y_MAX + 0.45):
-    #             print("Rover has left the mission map!")
-    #             return 0, True
-
-    #         current_distance = math.hypot(
-    #             (self.x - WAYPOINT_1_X), (self.x - WAYPOINT_1_Y)
-    #         )
-    #         newDistanceToDest = math.hypot(
-    #             (self.last_position_x - WAYPOINT_1_X),
-    #             (self.last_position_y - WAYPOINT_1_Y),
-    #         )
-
-    #         # Incentivize the rover to stay away from objects
-    #         if self.collision_threshold >= 2.0:  # very safe distance
-    #             multiplier = multiplier + 1
-    #         elif (
-    #             self.collision_threshold < 2.0 and self.collision_threshold >= 1.5
-    #         ):  # pretty safe
-    #             multiplier = multiplier + 0.5
-    #         elif (
-    #             self.collision_threshold < 1.5 and self.collision_threshold >= 1.0
-    #         ):  # just enough time to turn
-    #             multiplier = multiplier + 0.25
-    #         else:
-    #             multiplier = (
-    #                 multiplier  # probably going to hit something and get a zero reward
-    #             )
-    #         print(
-    #             "newDistanceToDest",
-    #             newDistanceToDest,
-    #             "self.distToTest",
-    #             current_distance,
-    #         )
-
-    #         if newDistanceToDest >= current_distance:
-    #             multiplier = 0
-    #         else:
-    #             multiplier = multiplier + 3
-    #         reward = base_reward * multiplier
-
-    #     return reward, done
 
     """
     DO NOT EDIT - Function to receive LIDAR data from a ROSTopic
