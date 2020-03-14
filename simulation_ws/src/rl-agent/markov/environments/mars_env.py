@@ -499,12 +499,7 @@ class MarsEnv(gym.Env):
 
                 return True
 
-            if (
-                abs(self.x - self.last_position_x) <= 0.005
-                and abs(self.y - self.last_position_y) <= 0.005
-            ):
-                self.samespotTimes += 1
-                print("in same spot")
+     
 
             # Check for episode ending events first
             # ###########################################
@@ -544,6 +539,21 @@ class MarsEnv(gym.Env):
         :return: reward as float
                  done as boolean
         """
+
+
+        ENDC = '\033[m'
+        TGREEN =  '\033[32m'
+
+
+        if (
+        abs(self.x - self.last_position_x) <= 0.005
+        and abs(self.y - self.last_position_y) <= 0.005
+        ):
+            self.samespotTimes += 1
+            print("in same spot")
+            return 0, False
+
+            
         failed = self.has_failed()
         if failed:
             return 0, True
@@ -569,9 +579,7 @@ class MarsEnv(gym.Env):
         CURRENT_WAYPOINT = (WAYPOINT_1_X[self.whichwaypoint], WAYPOINT_1_Y[self.whichwaypoint])
         
 
-        # WAYPOINT_1_X = -10
-        # WAYPOINT_1_Y = -4
-        INITIAL_DISTANCE_TO_WAYPOINT = .3
+        INITIAL_DISTANCE_TO_WAYPOINT = .1 #make variable
         reward_budget = 100000 / 100
         done = False
 
@@ -579,6 +587,7 @@ class MarsEnv(gym.Env):
 
         
         current_distance = math.hypot((self.x - CURRENT_WAYPOINT[0]), (self.y - CURRENT_WAYPOINT[1]))
+        
         last_distance = math.hypot(
             (self.last_position_x - CURRENT_WAYPOINT[0]),
             (self.last_position_y - CURRENT_WAYPOINT[1]),
@@ -586,7 +595,7 @@ class MarsEnv(gym.Env):
         waypointNo = 0
         
         if current_distance < .1:
-            print('reached waypoint', waypointNo)
+            print(TGREEN, 'reached waypoint', waypointNo, ENDC)
             self.whichwaypoint += 1
             self.waypointsteps = 0
             return 10, False
@@ -594,24 +603,23 @@ class MarsEnv(gym.Env):
         
       
         
-        # # Incentivize the rover to stay away from objects
-        # multiplier = 0
-        # if self.collision_threshold >= 2.0:  # very safe distance
-        #     multiplier = multiplier + .9
-        # elif (
-        #     self.collision_threshold < 2.0 and self.collision_threshold >= 1.5
-        # ):  # pretty safe
-        #     multiplier = multiplier + 0.5
-        # elif (
-        #     self.collision_threshold < 1.5 and self.collision_threshold >= 1.0
-        # ):  # just enough time to turn
-        #     multiplier = multiplier + 0.25
-        # else:
-        #     multiplier = (
-        #         multiplier  # probably going to hit something and get a zero reward
-        #     )
-        ENDC = '\033[m'
-        TGREEN =  '\033[32m'
+        # Incentivize the rover to stay away from objects
+        multiplier = 0
+        if self.collision_threshold >= 2.0:  # very safe distance
+            multiplier = multiplier + 1
+        elif (
+            self.collision_threshold < 2.0 and self.collision_threshold >= 1.5
+        ):  # pretty safe
+            multiplier = multiplier + 0.8
+        elif (
+            self.collision_threshold < 1.5 and self.collision_threshold >= 1.0
+        ):  # just enough time to turn
+            multiplier = multiplier + 0.7
+        else:
+            multiplier = (
+                multiplier + .2  # probably going to hit something and get a zero reward
+            )
+
         print(TGREEN + 'last x and y:', self.last_position_x, self.last_position_y, ENDC)
         print(
             TGREEN + "last", last_distance, "current", current_distance, ENDC
@@ -620,7 +628,7 @@ class MarsEnv(gym.Env):
         reward = (
             (last_distance - current_distance)
             / (INITIAL_DISTANCE_TO_WAYPOINT)
-            * reward_budget
+            * reward_budget * multiplier
         )
 
 
