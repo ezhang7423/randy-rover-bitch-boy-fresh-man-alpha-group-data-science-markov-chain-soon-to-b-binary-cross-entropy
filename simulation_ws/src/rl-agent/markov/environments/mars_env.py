@@ -33,7 +33,7 @@ cwd = "/home/ete/rover/simulation_ws/src/rl-agent/markov/environments"
 def handler(signal_received, frame):
     with open(os.path.join(cwd, "run.txt"), "r+") as fout:
         data = fout.read().splitlines()
-        run = int(data[1].split(" ")[1])
+        # run = int(data[1].split(" ")[1])
         data[1] = "run 0"
         data[2] = "episode " + str(episode + 1)
         writeable = "\n".join(data)
@@ -452,8 +452,12 @@ class MarsEnv(gym.Env):
 
         self.reward = reward
         self.done = done
+
+        self.last_position_x = self.x
+        self.last_position_y = self.y
+
         # START CHANGES
-        if done != True:
+        if not done:
             coordinates[self.steps] = [self.x, self.y]
             outputs[self.steps] = action[0]
         else:
@@ -485,11 +489,10 @@ class MarsEnv(gym.Env):
                 outputs,
             )
             self.run += 1
+            coordinates = np.zeros((10000, 2))
+            outputs = np.zeros((10000))
 
         # END CHANGES
-
-        self.last_position_x = self.x
-        self.last_position_y = self.y
 
     """
     EDIT - but do not change the function signature. 
@@ -618,6 +621,7 @@ class MarsEnv(gym.Env):
             else:
                 multiplier = multiplier + 3
             reward = base_reward * multiplier
+
         return reward, done
 
     """
