@@ -85,7 +85,7 @@ pyasn1-modules==0.2.8
 pycparser==2.20
 pygame==1.9.3
 pyglet==1.5.0
-PyJWT==1.7.1
+PyJWT==2.4.0
 PyOpenGL==3.1.5
 pyparsing==2.4.6
 pytest==5.3.5
