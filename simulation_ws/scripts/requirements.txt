@@ -71,7 +71,7 @@ minio==4.0.5
 more-itertools==8.2.0
 networkx==2.4
 notify2==0.3.1
-numpy==1.14.5
+numpy==1.22.0
 oauthlib==3.1.0
 olefile==0.46
 packaging==20.3
